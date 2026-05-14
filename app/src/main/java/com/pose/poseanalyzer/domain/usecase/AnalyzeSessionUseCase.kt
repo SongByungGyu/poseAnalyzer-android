@@ -18,7 +18,7 @@ import javax.inject.Inject
  */
 class AnalyzeSessionUseCase @Inject constructor(
     private val detector: PoseDetector,
-    private val evaluators: List<PostureEvaluator>,
+    private val evaluators: List<@JvmSuppressWildcards PostureEvaluator>,
     private val asymmetryAnalyzer: AsymmetryAnalyzer
 ) {
     suspend fun analyze(

@@ -86,6 +86,9 @@ dependencies {
     implementation(libs.mlkit.pose.detection)
     implementation(libs.mlkit.pose.detection.accurate)
 
+    // EXIF
+    implementation(libs.androidx.exifinterface)
+
     // CameraX (Plan A2b)
     implementation(libs.camerax.core)
     implementation(libs.camerax.camera2)
