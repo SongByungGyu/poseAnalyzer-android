@@ -103,4 +103,5 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.turbine)
     testImplementation(libs.room.testing)
+    testImplementation(libs.androidx.test.core)
 }
