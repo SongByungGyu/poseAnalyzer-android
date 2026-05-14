@@ -8,6 +8,7 @@ import com.pose.poseanalyzer.data.UserProfileRepository
 import com.pose.poseanalyzer.domain.detection.PoseDetectionException
 import com.pose.poseanalyzer.domain.model.SessionReport
 import com.pose.poseanalyzer.domain.usecase.AnalyzeSessionUseCase
+import com.pose.poseanalyzer.presentation.result.ResultHolder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +26,8 @@ import javax.inject.Inject
 class MeasurementViewModel @Inject constructor(
     private val analyzeUseCase: AnalyzeSessionUseCase,
     private val userProfileRepository: UserProfileRepository,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val resultHolder: ResultHolder
 ) : ViewModel() {
 
     enum class Step { FRONT, SIDE, HEIGHT, ANALYZING, DONE }
@@ -97,13 +99,15 @@ class MeasurementViewModel @Inject constructor(
         _state.update { it.copy(errorMessage = null) }
     }
 
-    /** 분석 완료 후 결과 저장 (호출자가 onCompleted 콜백 받은 뒤 명시적으로 호출). */
-    fun persistReport(onSaved: (sessionId: String) -> Unit) {
+    /**
+     * 분석 완료 후 [ResultHolder]에 결과 보관 → AnalysisResultScreen 진입.
+     *
+     * Plan A2c부터는 자동 저장 X — 결과 화면에서 사용자가 저장 버튼을 눌러야 SessionRepository에 들어감.
+     */
+    fun handOffReport(onReady: () -> Unit) {
         val report = _state.value.report ?: return
-        viewModelScope.launch {
-            runCatching { sessionRepository.save(report) }
-            onSaved(report.id.toString())
-        }
+        resultHolder.hold(report)
+        onReady()
     }
 
     /** 키 입력 유효성 (50~250 cm) */

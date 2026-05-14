@@ -21,7 +21,7 @@ import com.pose.poseanalyzer.domain.model.SessionView
  */
 @Composable
 fun MeasurementWizardScreen(
-    onCompleted: (sessionId: String) -> Unit,
+    onCompleted: () -> Unit,
     onCancel: () -> Unit,
     viewModel: MeasurementViewModel = hiltViewModel()
 ) {
@@ -29,10 +29,10 @@ fun MeasurementWizardScreen(
     var sourcePickerOpen by remember { mutableStateOf(false) }
     var cameraOpen by remember { mutableStateOf(false) }
 
-    // 결과 도착 시 자동 저장 후 onCompleted
+    // 결과 도착 시 ResultHolder에 넘기고 결과 화면 진입
     LaunchedEffect(state.step) {
         if (state.step == MeasurementViewModel.Step.DONE) {
-            viewModel.persistReport(onCompleted)
+            viewModel.handOffReport(onCompleted)
         }
     }
 
