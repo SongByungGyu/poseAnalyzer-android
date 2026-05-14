@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+gradle/wrapper/*.zip
+
+# IDE
+.idea/
+*.iml
+
+# Local config
+local.properties
+
+# Kotlin
+.kotlin/
+
+# Captures
+captures/
+
+# Keystores
+*.jks
+*.keystore
+
+# macOS
+.DS_Store
+
+# Output
+*.apk
+*.aab
+
+# Secrets
+google-services.json
