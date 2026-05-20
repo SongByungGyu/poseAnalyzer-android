@@ -85,10 +85,9 @@ class AnalysisResultViewModel @Inject constructor(
     }
 
     /**
-     * 직전 측정 대비 변화 (정상→정상 또는 측정 가능한 경우만).
-     * 양수면 수치 증가, 음수면 감소. null이면 비교 불가.
+     * 직전 측정 대비 편차 변화량 (양수 = 악화, 음수 = 개선). null이면 비교 불가.
      */
-    fun delta(type: PostureType): Double? {
+    fun deviationDelta(type: PostureType): Double? {
         val s = _state.value
         val current = s.report?.postures?.firstOrNull { it.type == type }
             ?: return null
@@ -97,6 +96,17 @@ class AnalysisResultViewModel @Inject constructor(
         val prevPosture = prev.postures.firstOrNull { it.typeRaw == type.name }
             ?: return null
         if (prevPosture.statusRaw == PostureStatus.UNMEASURABLE.name) return null
-        return current.primaryMetric - prevPosture.primaryMetric
+        return current.deviationValue - prevPosture.primaryMetric.let { raw ->
+            when (type) {
+                PostureType.FORWARD_HEAD         -> maxOf(0.0, 180.0 - raw)
+                PostureType.ROUND_SHOULDER       -> raw * 100.0
+                PostureType.KYPHOSIS             -> maxOf(0.0, 180.0 - raw)
+                PostureType.ANTERIOR_PELVIC_TILT -> kotlin.math.abs(180.0 - raw)
+                PostureType.KNEE_HYPEREXTENSION  -> maxOf(0.0, raw - 180.0)
+                PostureType.SCOLIOSIS            -> raw
+                PostureType.HEAD_TILT            -> raw
+                PostureType.KNEE_ALIGNMENT       -> kotlin.math.abs(raw - 180.0)
+            }
+        }
     }
 }

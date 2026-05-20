@@ -41,16 +41,20 @@ object GeometryMath {
     }
 
     /**
-     * 수평선 대비 두 점이 만드는 직선의 기울기 각도. 결과 범위 -180~180.
+     * 수평선 대비 두 점이 만드는 직선의 기울기 각도.
+     * 결과 범위: -90 ~ 90 (선의 기울기는 방향 무관).
      * 좌상단 원점 기준: dy 양수 = 아래쪽, dx 양수 = 오른쪽.
      */
     fun lineAngleFromHorizontal(a: Point2D, b: Point2D): Double {
         val dx = (b.x - a.x).toDouble()
         val dy = (b.y - a.y).toDouble()
-        return Math.toDegrees(atan2(dy, dx))
+        var angle = Math.toDegrees(atan2(dy, dx))   // -180 ~ 180
+        if (angle > 90.0) angle -= 180.0
+        else if (angle < -90.0) angle += 180.0
+        return angle
     }
 
-    /** 절댓값 기울기 (0~180) */
+    /** 절댓값 기울기 (0~90) */
     fun absLineAngleFromHorizontal(a: Point2D, b: Point2D): Double =
         abs(lineAngleFromHorizontal(a, b))
 
@@ -58,5 +62,16 @@ object GeometryMath {
     fun horizontalGapRatio(from: Point2D, to: Point2D, referenceWidth: Double): Double {
         if (referenceWidth <= 0) return 0.0
         return abs((from.x - to.x).toDouble()) / referenceWidth
+    }
+
+    /**
+     * 코·눈 위치로 귀 위치 추정 (해부학적 비율).
+     * 측면에서 코→눈→귀가 거의 한 직선 위에 있고, `눈→귀 거리 ≈ 코→눈 거리 × 1.4`.
+     * 머리카락에 귀가 가려졌을 때 fallback 으로 사용.
+     */
+    fun estimateEarFromNoseEye(nose: Point2D, eye: Point2D): Point2D {
+        val dx = eye.x - nose.x
+        val dy = eye.y - nose.y
+        return Point2D(x = eye.x + dx * 1.4f, y = eye.y + dy * 1.4f)
     }
 }

@@ -86,8 +86,11 @@ fun CustomCameraScreen(
         AndroidView(
             factory = { ctx: Context ->
                 PreviewView(ctx).apply {
-                    this.controller = cameraController
+                    // COMPATIBLE 모드(TextureView)로 강제 — 기본 PERFORMANCE 모드(SurfaceView)는
+                    // 그 위에 Compose Canvas가 그려질 때 z-order/마스킹 문제로 검은 화면이 될 수 있음.
+                    implementationMode = PreviewView.ImplementationMode.COMPATIBLE
                     scaleType = PreviewView.ScaleType.FILL_CENTER
+                    this.controller = cameraController
                 }
             },
             modifier = Modifier.fillMaxSize()

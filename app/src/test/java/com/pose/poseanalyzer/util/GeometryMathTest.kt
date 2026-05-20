@@ -79,6 +79,26 @@ class GeometryMathTest {
     }
 
     @Test
+    fun `좌우 반전 수평선도 0도 (선의 기울기는 방향 무관)`() {
+        // 버그 fix 전: atan2 가 ~180° 반환 → 척추측만 결과 폭주 원인
+        val angle = GeometryMath.lineAngleFromHorizontal(
+            Point2D(10f, 5f), Point2D(0f, 5f)
+        )
+        assertEquals(0.0, angle, 0.01)
+    }
+
+    @Test
+    fun `귀 추정 좌표는 눈에서 코반대방향으로 1_4배`() {
+        // 코(0,0) → 눈(5,0) → 귀 추정: 눈 + (눈-코)*1.4 = (5,0) + (5,0)*1.4 = (12, 0)
+        val estimated = GeometryMath.estimateEarFromNoseEye(
+            nose = Point2D(0f, 0f),
+            eye = Point2D(5f, 0f)
+        )
+        assertEquals(12f, estimated.x, 0.01f)
+        assertEquals(0f, estimated.y, 0.01f)
+    }
+
+    @Test
     fun `수평 거리 비율`() {
         val ratio = GeometryMath.horizontalGapRatio(
             Point2D(5f, 0f), Point2D(0f, 0f), referenceWidth = 20.0

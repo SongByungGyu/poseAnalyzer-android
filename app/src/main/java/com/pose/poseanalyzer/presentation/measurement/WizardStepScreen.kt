@@ -76,7 +76,8 @@ fun WizardStepScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = AppSpacing.s5),
+                    .padding(horizontal = AppSpacing.s5)
+                    .padding(bottom = AppSpacing.s5),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(AppSpacing.s4)
             ) {
@@ -93,12 +94,13 @@ fun WizardStepScreen(
                     textAlign = TextAlign.Center
                 )
 
-                // 점선 실루엣 일러스트 (BodyShape 동일)
+                // 점선 실루엣 일러스트 — weight(1f)로 남은 공간만 차지 (aspectRatio 사용 시
+                // 높이=너비×2가 되어 버튼이 화면 밖으로 밀림)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .weight(1f)
                         .padding(vertical = AppSpacing.s2)
-                        .aspectRatio(0.5f)
                 ) {
                     SilhouetteIllustration(view = view, modifier = Modifier.fillMaxSize())
                 }

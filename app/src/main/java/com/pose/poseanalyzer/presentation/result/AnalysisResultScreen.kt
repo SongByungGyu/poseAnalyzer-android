@@ -128,7 +128,7 @@ fun AnalysisResultScreen(
                     if (!state.isReadOnly && state.previousSession != null) {
                         PreviousComparisonSection(
                             postures = report.postures,
-                            getDelta = viewModel::delta
+                            getDeviationDelta = viewModel::deviationDelta
                         )
                     }
                 }
@@ -257,14 +257,14 @@ private fun AsymmetryRow(label: String, diff: AsymmetryResult.Difference) {
 @Composable
 private fun PreviousComparisonSection(
     postures: List<PostureResult>,
-    getDelta: (PostureType) -> Double?
+    getDeviationDelta: (PostureType) -> Double?
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.s2)) {
         SectionHeader("직전 측정 대비")
         AppCard {
             postures.forEach { p ->
-                getDelta(p.type)?.let { d ->
-                    ComparisonRow(type = p.type, delta = d, unit = p.primaryMetricUnit)
+                getDeviationDelta(p.type)?.let { d ->
+                    ComparisonRow(result = p, deviationDelta = d)
                 }
             }
         }
@@ -273,27 +273,33 @@ private fun PreviousComparisonSection(
 
 @Composable
 private fun ComparisonRow(
-    type: PostureType,
-    delta: Double,
-    unit: PostureResult.MetricUnit
+    result: PostureResult,
+    deviationDelta: Double
 ) {
-    val isStable = kotlin.math.abs(delta) < 0.5
+    // 편차 기준: 음수 = 개선(deviation 감소), 양수 = 악화(deviation 증가)
+    val isStable = kotlin.math.abs(deviationDelta) < 1.0
+    val improved  = deviationDelta < -1.0
     val color: Color = when {
         isStable -> AppColors.OnSurfaceTertiary
-        delta > 0 -> AppColors.StatusCaution
-        else -> AppColors.StatusNormal
+        improved -> AppColors.StatusNormal
+        else     -> AppColors.StatusCaution
     }
     val icon = when {
-        delta > 0.05 -> Icons.Filled.North
-        delta < -0.05 -> Icons.Filled.South
-        else -> Icons.Filled.East
+        isStable -> Icons.Filled.East
+        improved -> Icons.Filled.South
+        else     -> Icons.Filled.North
+    }
+    val valueStr = if (result.type == com.pose.poseanalyzer.domain.model.PostureType.ROUND_SHOULDER) {
+        String.format("%.0f", deviationDelta)
+    } else {
+        String.format("%.1f", deviationDelta)
     }
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            type.koreanName,
+            result.type.koreanName,
             style = AppTypography.callout,
             color = AppColors.OnSurface,
             modifier = Modifier.weight(1f)
@@ -302,9 +308,9 @@ private fun ComparisonRow(
         Text(
             String.format(
                 "%s%s%s",
-                if (delta > 0) "+" else "",
-                String.format("%.1f", delta),
-                unit.symbol
+                if (deviationDelta > 0) "+" else "",
+                valueStr,
+                result.deviationUnitSymbol
             ),
             style = AppTypography.caption,
             color = color

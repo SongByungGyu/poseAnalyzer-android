@@ -95,32 +95,41 @@ fun PostureResultCard(result: PostureResult, modifier: Modifier = Modifier) {
 
 @Composable
 private fun MetricRow(result: PostureResult) {
-    Row(
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        if (result.status == PostureStatus.UNMEASURABLE) {
-            Text(
-                "—",
-                style = AppTypography.display.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
-                color = AppColors.OnSurfaceTertiary
-            )
-        } else {
-            val text = if (result.primaryMetricUnit == PostureResult.MetricUnit.DEGREE) {
-                String.format("%.0f", result.primaryMetric)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            if (result.status == PostureStatus.UNMEASURABLE) {
+                Text(
+                    "—",
+                    style = AppTypography.display.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
+                    color = AppColors.OnSurfaceTertiary
+                )
             } else {
-                String.format("%.2f", result.primaryMetric)
+                val text = if (result.type == com.pose.poseanalyzer.domain.model.PostureType.ROUND_SHOULDER) {
+                    String.format("%.0f", result.deviationValue)
+                } else {
+                    String.format("%.1f", result.deviationValue)
+                }
+                Text(
+                    text,
+                    style = AppTypography.display.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
+                    color = AppColors.OnSurface
+                )
+                Text(
+                    result.deviationUnitSymbol,
+                    style = AppTypography.callout,
+                    color = AppColors.OnSurfaceTertiary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
             }
+        }
+        if (result.status != PostureStatus.UNMEASURABLE) {
             Text(
-                text,
-                style = AppTypography.display.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
-                color = AppColors.OnSurface
-            )
-            Text(
-                result.primaryMetricUnit.symbol,
-                style = AppTypography.callout,
-                color = AppColors.OnSurfaceTertiary,
-                modifier = Modifier.padding(bottom = 4.dp)
+                result.deviationLabel,
+                style = AppTypography.caption.copy(fontSize = 12.sp),
+                color = AppColors.OnSurfaceTertiary
             )
         }
     }

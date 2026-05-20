@@ -16,10 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.pose.poseanalyzer.domain.model.SessionView
 import com.pose.poseanalyzer.presentation.theme.AppColors
@@ -50,7 +52,12 @@ fun PoseGuideOverlay(
     }
     Box(modifier = modifier.fillMaxSize()) {
         // 1) 실루엣 외부만 dim
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        // BlendMode.Clear가 작동하려면 오프스크린 레이어가 필요 — graphicsLayer로 강제.
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        ) {
             val width = size.width
             val height = size.height
             val silhouetteWidth = width * 0.55f
@@ -63,7 +70,7 @@ fun PoseGuideOverlay(
                 left = left, top = top,
                 right = left + silhouetteWidth, bottom = top + silhouetteHeight
             ) {
-                drawRect(color = Color.Transparent, blendMode = BlendMode.Clear)
+                drawRect(color = Color.Black, blendMode = BlendMode.Clear)
             }
         }
 
