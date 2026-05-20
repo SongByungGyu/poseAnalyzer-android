@@ -32,8 +32,9 @@ class HeadTiltEvaluatorTest {
     }
 
     @Test
-    fun `귀 기울기 3도 caution`() {
-        val result = evaluator.evaluate(framEars(3.0))
+    fun `귀 기울기 4_5도 caution`() {
+        // 정상 0~4° / 주의 4~5° → 4.5°는 caution
+        val result = evaluator.evaluate(framEars(4.5))
         assertEquals(PostureStatus.CAUTION, result.status)
     }
 
@@ -44,7 +45,7 @@ class HeadTiltEvaluatorTest {
     }
 
     @Test
-    fun `귀 없으면 눈으로 fallback`() {
+    fun `눈만 있어도 측정`() {
         val rise = (tan(Math.toRadians(1.0)) * 0.1).toFloat()
         val frame = PoseFrameFixtures.frame(
             SessionView.FRONT,
@@ -56,6 +57,35 @@ class HeadTiltEvaluatorTest {
         val result = evaluator.evaluate(frame)
         assertEquals(PostureStatus.NORMAL, result.status)
         assertEquals(listOf("LEFT_EYE", "RIGHT_EYE"), result.usedJointNames)
+    }
+
+    @Test
+    fun `눈 귀 둘다 있으면 눈 우선`() {
+        val frame = PoseFrameFixtures.frame(
+            SessionView.FRONT,
+            mapOf(
+                JointName.LEFT_EYE to Point2D(0.45f, 0.2f),
+                JointName.RIGHT_EYE to Point2D(0.55f, 0.2f),
+                JointName.LEFT_EAR to Point2D(0.4f, 0.2f),
+                JointName.RIGHT_EAR to Point2D(0.6f, 0.22f)
+            )
+        )
+        val result = evaluator.evaluate(frame)
+        assertEquals(listOf("LEFT_EYE", "RIGHT_EYE"), result.usedJointNames)
+    }
+
+    @Test
+    fun `눈 없으면 귀로 fallback`() {
+        val frame = PoseFrameFixtures.frame(
+            SessionView.FRONT,
+            mapOf(
+                JointName.LEFT_EAR to Point2D(0.4f, 0.2f),
+                JointName.RIGHT_EAR to Point2D(0.6f, 0.2f)
+            )
+        )
+        val result = evaluator.evaluate(frame)
+        assertEquals(PostureStatus.NORMAL, result.status)
+        assertEquals(listOf("LEFT_EAR", "RIGHT_EAR"), result.usedJointNames)
     }
 
     @Test

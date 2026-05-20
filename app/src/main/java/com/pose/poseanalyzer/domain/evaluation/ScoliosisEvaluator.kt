@@ -22,9 +22,11 @@ class ScoliosisEvaluator @Inject constructor() : PostureEvaluator {
     override val type = PostureType.SCOLIOSIS
     override val requiredView = SessionView.FRONT
 
+    // 정상 0~4° — ML 모델 간 좌표 차이로 인한 2~3° 노이즈를 흡수.
+    // 의심 >5°는 임상 기준(Cobb 10°+ 상당)이라 유지.
     private val thresholds = Thresholds(
-        normalRange = 0.0..2.0,
-        cautionRange = 2.0..5.0,
+        normalRange = 0.0..4.0,
+        cautionRange = 4.0..5.0,
         direction = Thresholds.Direction.LOWER_IS_NORMAL
     )
 

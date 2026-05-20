@@ -13,16 +13,19 @@ import javax.inject.Inject
 /**
  * 머리 좌우 기울기 (Head Tilt) — 정면 사진.
  *
- * 양 귀를 우선 사용. 신뢰도 부족 시 양 눈으로 fallback.
+ * 양 눈을 우선 사용. 신뢰도 부족 시 양 귀로 fallback.
+ * 귀는 ML 엔진 간 검출 편차가 커서 눈을 우선함.
  */
 class HeadTiltEvaluator @Inject constructor() : PostureEvaluator {
 
     override val type = PostureType.HEAD_TILT
     override val requiredView = SessionView.FRONT
 
+    // 정상 0~4° — ML 모델 간 좌표 차이로 인한 2~3° 노이즈를 흡수.
+    // 의심 >5°는 임상 기준이라 유지.
     private val thresholds = Thresholds(
-        normalRange = 0.0..2.0,
-        cautionRange = 2.0..5.0,
+        normalRange = 0.0..4.0,
+        cautionRange = 4.0..5.0,
         direction = Thresholds.Direction.LOWER_IS_NORMAL
     )
 
@@ -34,18 +37,18 @@ class HeadTiltEvaluator @Inject constructor() : PostureEvaluator {
         val rightName: JointName
         val usedConfidence: Double
         when {
-            earsReliable -> {
-                leftName = JointName.LEFT_EAR
-                rightName = JointName.RIGHT_EAR
-                usedConfidence = frame.averageConfidence(listOf(JointName.LEFT_EAR, JointName.RIGHT_EAR))
-            }
             eyesReliable -> {
                 leftName = JointName.LEFT_EYE
                 rightName = JointName.RIGHT_EYE
                 usedConfidence = frame.averageConfidence(listOf(JointName.LEFT_EYE, JointName.RIGHT_EYE))
             }
+            earsReliable -> {
+                leftName = JointName.LEFT_EAR
+                rightName = JointName.RIGHT_EAR
+                usedConfidence = frame.averageConfidence(listOf(JointName.LEFT_EAR, JointName.RIGHT_EAR))
+            }
             else -> {
-                return PostureResult.unmeasurable(type, "양 귀·양 눈 모두 인식 부족")
+                return PostureResult.unmeasurable(type, "양 눈·양 귀 모두 인식 부족")
             }
         }
 

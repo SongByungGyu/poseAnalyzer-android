@@ -37,8 +37,9 @@ class ScoliosisEvaluatorTest {
     }
 
     @Test
-    fun `어깨 3도 caution`() {
-        val result = evaluator.evaluate(setupFrame(3.0, 1.0))
+    fun `어깨 4_5도 caution`() {
+        // 정상 0~4° / 주의 4~5° → 4.5°는 caution
+        val result = evaluator.evaluate(setupFrame(4.5, 1.0))
         assertEquals(PostureStatus.CAUTION, result.status)
     }
 
