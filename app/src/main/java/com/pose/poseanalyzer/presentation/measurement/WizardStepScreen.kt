@@ -117,6 +117,7 @@ fun WizardStepScreen(
 
 @Composable
 private fun SilhouetteIllustration(view: SessionView, modifier: Modifier = Modifier) {
+    val strokeColor = AppColors.OnSurfaceTertiary
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -128,7 +129,7 @@ private fun SilhouetteIllustration(view: SessionView, modifier: Modifier = Modif
             val path = com.pose.poseanalyzer.presentation.measurement.bodyPathPublic(view, silhouetteWidth, silhouetteHeight)
             drawPath(
                 path = path,
-                color = AppColors.OnSurfaceTertiary,
+                color = strokeColor,
                 style = Stroke(
                     width = 2.dp.toPx(),
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))

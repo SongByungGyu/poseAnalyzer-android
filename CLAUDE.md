@@ -69,7 +69,7 @@ Navigation Compose 2.8.4 + Scaffold + NavigationBar (홈/기록 2 tab).
 실루엣 Box는 **`weight(1f)` 사용** (`aspectRatio(0.5f)` 절대 X — 너비 × 2 높이로 "사진 추가" 버튼이 화면 밖으로 밀림).
 
 ## 디자인 시스템
-iOS와 동일 토큰 (`AppColors`, `AppTypography`, `AppShapes`, `PoseTheme`):
+iOS와 동일 토큰 (`AppColors`, `AppTypography`, `AppShapes`, `PoseTheme`). **라이트·다크 모드 지원 (시스템 토글)** — `AppColors`의 각 토큰은 `@Composable @ReadOnlyComposable get()` 패턴으로 `isSystemInDarkTheme()` 분기, `PoseTheme`은 `darkColorScheme()` 별도 분기.
 1. 상태 색상 신성불가침 — 4단계만, 빨간색 X
 2. 한국어 합니다체
 3. 수치는 tabular nums
