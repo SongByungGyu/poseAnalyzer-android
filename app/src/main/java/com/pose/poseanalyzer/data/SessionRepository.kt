@@ -58,7 +58,8 @@ class SessionRepository @Inject constructor(
                 primaryMetric = p.primaryMetric,
                 primaryMetricUnitRaw = p.primaryMetricUnit.name,
                 confidence = p.confidence,
-                advice = p.advice
+                advice = p.advice,
+                algorithmVersion = p.algorithmVersion
             )
         }
 
@@ -100,7 +101,8 @@ class SessionRepository @Inject constructor(
             thresholds = Thresholds(0.0..0.0, null, Thresholds.Direction.HIGHER_IS_NORMAL),  // 저장된 결과엔 threshold 없음 — placeholder
             usedJointNames = emptyList(),
             confidence = entity.confidence,
-            advice = entity.advice
+            advice = entity.advice,
+            algorithmVersion = entity.algorithmVersion
         )
     }
 

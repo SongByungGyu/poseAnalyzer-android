@@ -1,5 +1,6 @@
 package com.pose.poseanalyzer.data.room
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -30,5 +31,11 @@ data class PostureEntity(
     val primaryMetric: Double,
     val primaryMetricUnitRaw: String,
     val confidence: Double,
-    val advice: String?
+    val advice: String?,
+    /**
+     * 알고리즘 버전 마커. 거북목·라운드숄더는 v1→v2(CVA·FSA) 마이그레이션.
+     * 기본값 "v1" — 마이그레이션 1→2 시점에 기존 행은 모두 v1로 채워짐.
+     */
+    @ColumnInfo(name = "algorithm_version", defaultValue = "v1")
+    val algorithmVersion: String = "v1"
 )
