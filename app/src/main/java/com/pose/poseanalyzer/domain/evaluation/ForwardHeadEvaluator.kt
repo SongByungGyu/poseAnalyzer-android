@@ -1,19 +1,30 @@
 package com.pose.poseanalyzer.domain.evaluation
 
 import com.pose.poseanalyzer.domain.model.JointName
+import com.pose.poseanalyzer.domain.model.Point2D
 import com.pose.poseanalyzer.domain.model.PoseFrame
 import com.pose.poseanalyzer.domain.model.PostureResult
+import com.pose.poseanalyzer.domain.model.PostureStatus
 import com.pose.poseanalyzer.domain.model.PostureType
 import com.pose.poseanalyzer.domain.model.SessionView
 import com.pose.poseanalyzer.domain.model.Thresholds
 import com.pose.poseanalyzer.util.GeometryMath
 import javax.inject.Inject
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.atan2
 
 /**
- * 거북목 (Forward Head Posture) 판정.
+ * 거북목 (Forward Head Posture) 판정 — v2: CVA (Craniovertebral Angle).
  *
- * 측정: 귀-어깨-엉덩이 각도.
- * 임계값: 정상 ≥170°, 주의 160~170°, 의심 <160°.
+ * 임상 표준. C7과 tragus를 잇는 선이 수평선과 이루는 각도 = CVA.
+ * - C7 = 양 어깨 중점 (ML Kit은 `.neck` 미제공 — iOS Vision의 `.neck` 대응)
+ * - tragus = 코+눈 추정 1순위 / 검출 귀 2순위
+ * - CVA = atan2(|tragus.y - C7.y|, |tragus.x - C7.x|) × 180/π
+ *   atan2 절대값 사용으로 ML Kit(좌상단)·Vision(좌하단) 좌표계 영향 제거.
+ *
+ * 임계값: 정상 ≥53° / 주의 48~53° / 의심 <48°.
+ * 엉덩이 좌표 불필요 — 상반신 모드 확장 발판 (별도 spec).
  */
 class ForwardHeadEvaluator @Inject constructor() : PostureEvaluator {
 
@@ -21,77 +32,77 @@ class ForwardHeadEvaluator @Inject constructor() : PostureEvaluator {
     override val requiredView = SessionView.SIDE
 
     private val thresholds = Thresholds(
-        normalRange = 170.0..360.0,
-        cautionRange = 160.0..170.0,
+        normalRange = 53.0..180.0,
+        cautionRange = 48.0..53.0,
         direction = Thresholds.Direction.HIGHER_IS_NORMAL
     )
 
     override fun evaluate(frame: PoseFrame): PostureResult {
-        // 어깨·엉덩이는 필수. 좌/우 중 둘 다 신뢰 가능한 쪽 선택.
-        val leftCore = listOf(JointName.LEFT_SHOULDER, JointName.LEFT_HIP)
-        val rightCore = listOf(JointName.RIGHT_SHOULDER, JointName.RIGHT_HIP)
-        val leftCoreOK = frame.areReliable(leftCore)
-        val rightCoreOK = frame.areReliable(rightCore)
+        val c7 = frame.neck
+            ?: return PostureResult.unmeasurable(type, "측면 어깨 인식 부족 (C7 산출 불가)")
 
-        if (!leftCoreOK && !rightCoreOK) {
-            return PostureResult.unmeasurable(type, "측면 어깨·엉덩이 인식 부족")
-        }
-
-        val useRight = when {
-            leftCoreOK && rightCoreOK ->
-                frame.averageConfidence(rightCore) > frame.averageConfidence(leftCore)
-            else -> rightCoreOK
-        }
-
-        val earName = if (useRight) JointName.RIGHT_EAR else JointName.LEFT_EAR
-        val eyeName = if (useRight) JointName.RIGHT_EYE else JointName.LEFT_EYE
-        val shoulderName = if (useRight) JointName.RIGHT_SHOULDER else JointName.LEFT_SHOULDER
-        val hipName = if (useRight) JointName.RIGHT_HIP else JointName.LEFT_HIP
-
-        val shoulder = frame.point(shoulderName)
-        val hip = frame.point(hipName)
-        if (shoulder == null || hip == null) {
-            return PostureResult.unmeasurable(type, "관절 좌표 누락")
-        }
-
-        // 머리 기준점(귀) 결정 — 코+눈 추정을 1순위로 사용.
-        // 검출된 귀는 머리카락/포니테일에 흔들려 ML 엔진 간 편차가 큼.
-        // 코·눈은 머리카락 영향이 없고 추정이 결정론적 기하라 양 플랫폼이 수렴함.
-        // 코가 가려진 경우(마스크 등)에만 검출된 귀로 fallback.
         val nose = frame.point(JointName.NOSE)
-        val eye = frame.point(eyeName)
-        val noseEyeOK = frame.areReliable(listOf(JointName.NOSE, eyeName))
-        val realEar = if (frame.isReliable(earName)) frame.point(earName) else null
+        val noseReliable = frame.isReliable(JointName.NOSE)
+        val bestEye = pickBest(frame, JointName.LEFT_EYE, JointName.RIGHT_EYE)
+        val bestEar = pickBest(frame, JointName.LEFT_EAR, JointName.RIGHT_EAR)
 
-        val earPoint: com.pose.poseanalyzer.domain.model.Point2D
-        val usedJoints: List<String>
+        val tragus: Point2D
+        val usedLabel: String
         when {
-            noseEyeOK && nose != null && eye != null -> {
-                earPoint = GeometryMath.estimateEarFromNoseEye(nose, eye)
-                usedJoints = listOf("NOSE+${eyeName.name}→EAR", shoulderName.name, hipName.name)
+            noseReliable && nose != null && bestEye != null -> {
+                tragus = GeometryMath.estimateEarFromNoseEye(nose, bestEye.first)
+                usedLabel = "NOSE+${bestEye.second.name}→EAR"
             }
-            realEar != null -> {
-                earPoint = realEar
-                usedJoints = listOf(earName.name, shoulderName.name, hipName.name)
+            bestEar != null -> {
+                tragus = bestEar.first
+                usedLabel = bestEar.second.name
             }
             else -> return PostureResult.unmeasurable(
                 type, "옆모습에서 얼굴(코·눈·귀)이 잘 보이도록 다시 촬영해 주세요."
             )
         }
 
-        val angle = GeometryMath.angleBetween(earPoint, shoulder, hip)
-        val status = thresholds.evaluate(angle)
+        val dy = abs(tragus.y - c7.y).toDouble()
+        val dx = abs(tragus.x - c7.x).toDouble()
+        val cva = atan2(dy, dx) * 180.0 / PI
+        val status = thresholds.evaluate(cva)
 
         return PostureResult(
             type = type,
             status = status,
-            primaryMetric = angle,
+            primaryMetric = cva,
             primaryMetricUnit = PostureResult.MetricUnit.DEGREE,
             thresholds = thresholds,
-            usedJointNames = usedJoints,
-            confidence = frame.averageConfidence(if (useRight) rightCore else leftCore),
-            advice = if (status == com.pose.poseanalyzer.domain.model.PostureStatus.NORMAL) null
-                else "장시간 고개를 숙이지 마시고, 모니터 높이를 눈높이로 맞춰주세요."
+            usedJointNames = listOf("C7(neck)", usedLabel),
+            confidence = frame.averageConfidence(
+                listOf(
+                    JointName.LEFT_SHOULDER, JointName.RIGHT_SHOULDER,
+                    JointName.NOSE, JointName.LEFT_EYE, JointName.RIGHT_EYE
+                )
+            ),
+            advice = if (status == PostureStatus.NORMAL) null
+                else "장시간 고개를 숙이지 마시고, 모니터 높이를 눈높이로 맞춰주세요.",
+            algorithmVersion = "v2"
         )
+    }
+
+    /** 좌·우 중 신뢰 가능한 쪽 반환. 둘 다면 신뢰도 높은 쪽. */
+    private fun pickBest(
+        frame: PoseFrame,
+        left: JointName,
+        right: JointName
+    ): Pair<Point2D, JointName>? {
+        val l = frame.point(left)?.takeIf { frame.isReliable(left) }
+        val r = frame.point(right)?.takeIf { frame.isReliable(right) }
+        return when {
+            l != null && r != null -> {
+                val lc = frame.averageConfidence(listOf(left))
+                val rc = frame.averageConfidence(listOf(right))
+                if (rc >= lc) r to right else l to left
+            }
+            l != null -> l to left
+            r != null -> r to right
+            else -> null
+        }
     }
 }

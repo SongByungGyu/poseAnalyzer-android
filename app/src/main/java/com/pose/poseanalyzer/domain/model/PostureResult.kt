@@ -11,7 +11,12 @@ data class PostureResult(
     val thresholds: Thresholds,
     val usedJointNames: List<String>,
     val confidence: Double,
-    val advice: String?
+    val advice: String?,
+    /**
+     * 알고리즘 버전 마커. 거북목·라운드숄더는 v1(자체)→v2(CVA·FSA 임상 표준) 마이그레이션.
+     * 다른 자세는 v1만 존재. default "v1".
+     */
+    val algorithmVersion: String = "v1"
 ) {
     enum class MetricUnit(val symbol: String) {
         DEGREE("°"),
