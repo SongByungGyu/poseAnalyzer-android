@@ -257,17 +257,43 @@ private fun AsymmetryRow(label: String, diff: AsymmetryResult.Difference) {
 @Composable
 private fun PreviousComparisonSection(
     postures: List<PostureResult>,
-    getDeviationDelta: (PostureType) -> Double?
+    getDeviationDelta: (PostureType) -> DeviationDelta
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.s2)) {
         SectionHeader("직전 측정 대비")
         AppCard {
             postures.forEach { p ->
-                getDeviationDelta(p.type)?.let { d ->
-                    ComparisonRow(result = p, deviationDelta = d)
+                when (val d = getDeviationDelta(p.type)) {
+                    is DeviationDelta.Compare -> ComparisonRow(result = p, deviationDelta = d.delta)
+                    is DeviationDelta.DifferentAlgorithm ->
+                        ComparisonAlgorithmNoticeRow(result = p, message = d.message)
+                    DeviationDelta.NoPrevious -> Unit
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ComparisonAlgorithmNoticeRow(
+    result: PostureResult,
+    message: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            result.type.koreanName,
+            style = AppTypography.callout,
+            color = AppColors.OnSurface,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            message,
+            style = AppTypography.micro,
+            color = AppColors.OnSurfaceTertiary
+        )
     }
 }
 

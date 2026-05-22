@@ -26,10 +26,17 @@ data class PostureResult(
 
     // region Deviation Display
 
-    /** 이상값 대비 편차 (항상 양수, 클수록 나쁨) */
+    /**
+     * 이상값 대비 편차 (항상 양수, 클수록 나쁨).
+     * 거북목·라운드숄더는 algorithmVersion에 따라 식이 다름.
+     */
     val deviationValue: Double get() = when (type) {
-        PostureType.FORWARD_HEAD         -> maxOf(0.0, 180.0 - primaryMetric)
-        PostureType.ROUND_SHOULDER       -> primaryMetric * 100.0   // 비율 → %
+        PostureType.FORWARD_HEAD ->
+            if (algorithmVersion == "v2") maxOf(0.0, 53.0 - primaryMetric)   // CVA cutoff 53° 미달분
+            else maxOf(0.0, 180.0 - primaryMetric)                            // v1: 180° 미달분
+        PostureType.ROUND_SHOULDER ->
+            if (algorithmVersion == "v2") primaryMetric                       // FSA 그대로 (도)
+            else primaryMetric * 100.0                                        // v1: 비율 → %
         PostureType.KYPHOSIS             -> maxOf(0.0, 180.0 - primaryMetric)
         PostureType.ANTERIOR_PELVIC_TILT -> kotlin.math.abs(180.0 - primaryMetric)
         PostureType.KNEE_HYPEREXTENSION  -> maxOf(0.0, primaryMetric - 180.0)
@@ -38,14 +45,16 @@ data class PostureResult(
         PostureType.KNEE_ALIGNMENT       -> kotlin.math.abs(primaryMetric - 180.0)
     }
 
-    /** 편차 단위 기호 */
+    /** 편차 단위 기호. v2 라운드숄더는 도(°), v1은 비율(%). */
     val deviationUnitSymbol: String get() =
-        if (type == PostureType.ROUND_SHOULDER) "%" else "°"
+        if (type == PostureType.ROUND_SHOULDER && algorithmVersion != "v2") "%" else "°"
 
     /** 편차 방향/의미 레이블 */
     val deviationLabel: String get() = when (type) {
-        PostureType.FORWARD_HEAD         -> "앞으로 기울어짐"
-        PostureType.ROUND_SHOULDER       -> "전방 이동"
+        PostureType.FORWARD_HEAD ->
+            if (algorithmVersion == "v2") "거북목 정도" else "앞으로 기울어짐"
+        PostureType.ROUND_SHOULDER ->
+            if (algorithmVersion == "v2") "전방 각도" else "전방 이동"
         PostureType.KYPHOSIS             -> "굽은 정도"
         PostureType.ANTERIOR_PELVIC_TILT -> if (primaryMetric < 180.0) "전방경사" else "후방경사"
         PostureType.KNEE_HYPEREXTENSION  -> "과신전"
