@@ -85,28 +85,29 @@ class AnalysisResultViewModel @Inject constructor(
     }
 
     /**
-     * 직전 측정 대비 편차 변화량 (양수 = 악화, 음수 = 개선). null이면 비교 불가.
+     * 직전 측정 대비 편차 변화 결과.
+     *
+     * 거북목·라운드숄더는 algorithmVersion이 다르면 비교 불가 (v1·v2가 다른 의미·단위).
+     * 그 외 6개 자세는 항상 같은 알고리즘이라 비교 가능.
      */
-    fun deviationDelta(type: PostureType): Double? {
+    fun deviationDelta(type: PostureType): DeviationDelta {
         val s = _state.value
         val current = s.report?.postures?.firstOrNull { it.type == type }
-            ?: return null
-        if (current.status == PostureStatus.UNMEASURABLE) return null
-        val prev = s.previousSession ?: return null
+            ?: return DeviationDelta.NoPrevious
+        if (current.status == PostureStatus.UNMEASURABLE) return DeviationDelta.NoPrevious
+        val prev = s.previousSession ?: return DeviationDelta.NoPrevious
         val prevPosture = prev.postures.firstOrNull { it.typeRaw == type.name }
-            ?: return null
-        if (prevPosture.statusRaw == PostureStatus.UNMEASURABLE.name) return null
-        return current.deviationValue - prevPosture.primaryMetric.let { raw ->
-            when (type) {
-                PostureType.FORWARD_HEAD         -> maxOf(0.0, 180.0 - raw)
-                PostureType.ROUND_SHOULDER       -> raw * 100.0
-                PostureType.KYPHOSIS             -> maxOf(0.0, 180.0 - raw)
-                PostureType.ANTERIOR_PELVIC_TILT -> kotlin.math.abs(180.0 - raw)
-                PostureType.KNEE_HYPEREXTENSION  -> maxOf(0.0, raw - 180.0)
-                PostureType.SCOLIOSIS            -> raw
-                PostureType.HEAD_TILT            -> raw
-                PostureType.KNEE_ALIGNMENT       -> kotlin.math.abs(raw - 180.0)
-            }
+            ?: return DeviationDelta.NoPrevious
+        if (prevPosture.statusRaw == PostureStatus.UNMEASURABLE.name) return DeviationDelta.NoPrevious
+
+        val isV2OnlyType = type == PostureType.FORWARD_HEAD || type == PostureType.ROUND_SHOULDER
+        if (isV2OnlyType && prevPosture.algorithmVersion != current.algorithmVersion) {
+            return DeviationDelta.DifferentAlgorithm(
+                "이전 측정은 다른 알고리즘으로 측정되어 비교할 수 없습니다"
+            )
         }
+
+        val prevResult = sessionRepository.toPostureResult(prevPosture)
+        return DeviationDelta.Compare(current.deviationValue - prevResult.deviationValue)
     }
 }

@@ -92,7 +92,9 @@ fun TrendScreen(
                 ChartArea(
                     pointsEmpty = state.points.isEmpty(),
                     selectedType = state.selectedType,
-                    modelProducer = modelProducer
+                    modelProducer = modelProducer,
+                    pointsCount = state.points.size,
+                    firstV2Index = state.firstV2Index
                 )
                 if (state.points.size <= 1 && state.points.isNotEmpty()) {
                     AppCard {
@@ -167,7 +169,9 @@ private fun RangePicker(range: TrendViewModel.Range, onSelect: (TrendViewModel.R
 private fun ChartArea(
     pointsEmpty: Boolean,
     selectedType: PostureType,
-    modelProducer: CartesianChartModelProducer
+    modelProducer: CartesianChartModelProducer,
+    pointsCount: Int,
+    firstV2Index: Int?
 ) {
     if (pointsEmpty) {
         AppCard(modifier = Modifier.fillMaxWidth()) {
@@ -178,14 +182,58 @@ private fun ChartArea(
             )
         }
     } else {
-        CartesianChartHost(
-            chart = rememberCartesianChart(
-                rememberLineCartesianLayer(),
-                startAxis = VerticalAxis.rememberStart(),
-                bottomAxis = HorizontalAxis.rememberBottom()
-            ),
-            modelProducer = modelProducer,
-            modifier = Modifier.fillMaxWidth().height(240.dp)
+        Box(modifier = Modifier.fillMaxWidth().height(240.dp)) {
+            CartesianChartHost(
+                chart = rememberCartesianChart(
+                    rememberLineCartesianLayer(),
+                    startAxis = VerticalAxis.rememberStart(),
+                    bottomAxis = HorizontalAxis.rememberBottom()
+                ),
+                modelProducer = modelProducer,
+                modifier = Modifier.fillMaxSize()
+            )
+            // v1 → v2 알고리즘 변경 시점 마커 (거북목·라운드숄더만)
+            if (firstV2Index != null && pointsCount >= 2) {
+                AlgorithmChangeMarker(
+                    fraction = firstV2Index.toFloat() / (pointsCount - 1).toFloat(),
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlgorithmChangeMarker(fraction: Float, modifier: Modifier = Modifier) {
+    // Vico 차트는 양쪽에 axis padding이 있어 정확한 데이터 영역과 약간 어긋날 수 있음.
+    // 1차 MVP는 부모 너비 기준 단순 비율로 표시 — 시각 검증에서 조정.
+    val strokeColor = AppColors.OnSurfaceTertiary
+    Box(modifier = modifier) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            val x = size.width * fraction
+            val dashLen = 6.dp.toPx()
+            val gapLen = 4.dp.toPx()
+            drawLine(
+                color = strokeColor,
+                start = androidx.compose.ui.geometry.Offset(x, 0f),
+                end = androidx.compose.ui.geometry.Offset(x, size.height),
+                strokeWidth = 1.5f.dp.toPx(),
+                pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                    floatArrayOf(dashLen, gapLen)
+                )
+            )
+        }
+        // 라벨: fraction(0~1) → BiasAlignment(-1~1)로 매핑해서 가로 위치 결정.
+        Text(
+            "알고리즘 변경",
+            style = AppTypography.micro,
+            color = AppColors.OnSurfaceTertiary,
+            modifier = Modifier
+                .align(androidx.compose.ui.BiasAlignment(
+                    horizontalBias = (fraction * 2f - 1f).coerceIn(-1f, 1f),
+                    verticalBias = -1f // top
+                ))
+                .padding(top = 2.dp, start = 4.dp)
         )
     }
 }
